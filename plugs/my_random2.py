@@ -38,5 +38,3 @@ def my_random2(game_board, color, count, timeout):
     target = tuple(target)
 
     return start + target
-    
-    
