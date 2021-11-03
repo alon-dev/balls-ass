@@ -51,6 +51,7 @@ class Players:
     def find_and_load(directory):
         sys.path.insert(0, directory)
         counter = 0
+        #fishkel
         cands = []
         for file in os.listdir(directory):
             cands.append(file)
