@@ -1,3 +1,2 @@
 # balls-ass
-https://prod.liveshare.vsengsaas.visualstudio.com/join?E647E667A8C8A051D880551D5CA346149E9C
-ballas gay
+https://prod.liveshare.vsengsaas.visualstudio.com/join?EDB92E2D413FBCF527028C5EC5C7FAE658CFballas gay
