@@ -9,9 +9,6 @@ import sys
 from contextlib import suppress
 import gc
 
-#Fuck niggers
-
-
 from PIL import Image, ImageTk
 
 import random
@@ -19,8 +16,10 @@ import random
 from copy import deepcopy
 
 class Consts:
-    TIMEOUT = 1.5
+    TIMEOUT = 1
     THINK = 30
+    DRAW = "DRAW"
+    MAX_MOVES = 100
 
 class EventPH:
     def __init__(self, widget):
@@ -34,28 +33,32 @@ class WidgetPH:
 class Players:
     player1=None
     player2=None
+    base1=None
+    base2=None
     @staticmethod
     def load(file1, file2):
-        base1 = os.path.splitext(file1)[0]
-        base2 = os.path.splitext(file2)[0]
+        Players.base1 = os.path.splitext(file1)[0]
+        Players.base2 = os.path.splitext(file2)[0]
         try:
-                mod1 = importlib.import_module(base1)
-                mod2 = importlib.import_module(base2)
-                Players.player1 = getattr(mod1, base1)
-                Players.player2 = getattr(mod2, base2)
+                mod1 = importlib.import_module(Players.base1)
+                mod2 = importlib.import_module(Players.base2)
+                Players.player1 = getattr(mod1, Players.base1)
+                Players.player2 = getattr(mod2, Players.base2)
 #                result = method_to_call(5)
-        except (RuntimeError, TypeError, NameError):
+        except (RuntimeError, TypeError, NameError,Exception):
                 print(NameError) 
+                return False
+        
+        return True
 
 
-    def find_and_load(directory):
+    def find_all(directory):
         sys.path.insert(0, directory)
         counter = 0
-        #fishkel
         cands = []
         for file in os.listdir(directory):
             cands.append(file)
-        Players.load(cands[0], cands[1])        
+        return cands       
 
 class Board_2players():
     def __init__(self, master, game, player, computer):
@@ -135,7 +138,8 @@ class Board_2players():
     def build_board(self, master):
         frame = Frame(master)
         newfont = font.Font(size=30)
-        restart = Button(frame, text="New game", fg="green")
+        title = Players.base1 + " VS " + Players.base2
+        restart = Button(frame, text=title, fg="green")
         restart['font'] = newfont
         restart.pack(side=LEFT)
         restart.bind("<Button-1>", lambda event, root=master: self.newGame(event, master))
@@ -380,6 +384,7 @@ class Game_2players():
         self.game_board = self.starting_board()
         self.winner = ""
         self.move_no = 0
+        self.last_move = (self.player,0,0)
         self.view = Board_2players(master, self, self.player, self.computer)
         timer = threading.Timer(Consts.TIMEOUT, lambda: self.make_move())
         timer.start()        
@@ -487,20 +492,93 @@ class Game_2players():
 
         return gameBoard
 
+    def too_long_turn(self):
+        winner = self.computer if (self.view.current_turn == self.player) else self.player
+        self.winner = winner
+        print("Too long turn for  " + self.view.current_turn + ". "+ winner + " is the winner")
+        self.view.endGame()
+
+    def update_options_for_location(self, i,j, game_board, color, turn, placings, eatings):
+        if game_board[i][j] != None and  game_board[i][j].color == color:
+            candiate_eatings = [(i+1,j+1), (i+1,j-1), (i-1,j+1), (i-1,j-1)]
+            # eating has mandatory priority
+            for eat in candiate_eatings:
+                if game_board[i][j].canEat(eat[0], eat[1], game_board, turn, game_board[i][j].isQueen):
+                    if ((i,j) not in eatings):
+                            eatings[(i,j)] = []
+                    eatings[(i,j)].append([eat[0]-i+eat[0], eat[1]-j+eat[1]])
+            # if no eating lets check regular move
+            if (len(eatings) == 0):
+                options = game_board[i][j].possible_placing(game_board)
+                if (len(options) > 0):
+                    for k in range(len(options)):
+                        placings[(i,j)]  = options
+
+    def is_valid_move(self, player_move,start_at):
+        placings = {}
+        eatings = {}
+        turn = "player" if (self.view.current_turn == "white") else "computer"
+
+        if (start_at != None):
+            i = start_at[0]
+            j = start_at[1]
+            self.update_options_for_location(i,j, self.game_board, self.view.current_turn, turn, placings, eatings)
+
+        for i in range(len(self.game_board)):
+            for j in range(len(self.game_board[i])):
+                self.update_options_for_location(i,j, self.game_board, self.view.current_turn, turn, placings, eatings)
+
+        if (len(eatings) > 0):
+            array_to_use = eatings
+        else:
+            array_to_use = placings
+
+        start = (player_move[0], player_move[1])
+        end = [player_move[2], player_move[3]]
+        if (( start in array_to_use) and (end in array_to_use[start])):
+            return True
+
+        return False
+
     def make_move(self):
         self.move_no = self.move_no + 1
-        if (self.view.current_turn == self.computer):
-            bestMove = Players.player1(self.game_board, self.view.current_turn, self.move_no, Consts.THINK)
-        else:
-            bestMove = Players.player2(self.game_board, self.view.current_turn, self.move_no, Consts.THINK)
+        start_at = None
+        pass_board = deepcopy(self.game_board)
+        if (self.last_move[0] == self.view.current_turn):
+            start_at = (self.last_move[1], self.last_move[2])
+        
+        long_turn_timer = threading.Timer(Consts.THINK+1, lambda: self.too_long_turn())
+        long_turn_timer.start()    
 
-        if (len(bestMove) == 0):
+        if (self.view.current_turn == self.computer):
+            bestMove = Players.player1(pass_board, self.view.current_turn, self.move_no, Consts.THINK, start_at)
+        else:
+            bestMove = Players.player2(pass_board, self.view.current_turn, self.move_no, Consts.THINK, start_at)
+
+        long_turn_timer.cancel()
+        self.view.dehighlight(self.view.currently_highlighted)
+        if (len(bestMove) > 0):
+            if (not self.is_valid_move(bestMove,start_at)):
+                print (self.view.current_turn + " made and illegal move. LOST!")
+                winner = self.computer if (self.view.current_turn == self.player) else self.player
+                self.winner = winner
+                self.view.endGame()
+                return                
+
+        if (len(bestMove) == 0 or (start_at != None and (bestMove[0] != start_at[0] or bestMove[1] != start_at[1]))):
             winner = self.computer if (self.view.current_turn == self.player) else self.player
             self.winner = winner
             self.view.endGame()
             return
+        
+        if (self.move_no == Consts.MAX_MOVES):
+            print ("Got to " + Consts.MAX_MOVES + ". Draw it is")
+            self.winner = Consts.DRAW
+            self.view.endGame()
+            return            
 
-        print("move: ", bestMove)
+        self.last_move = (self.view.current_turn, bestMove[2], bestMove[3])
+        print(self.move_no, " move: ", bestMove)
         print("---------end turn----------")
         if abs(bestMove[2] - bestMove[0]) > 1 or abs(bestMove[3] - bestMove[1]) > 1:
             attacker = [bestMove[0], bestMove[1]]
@@ -745,7 +823,6 @@ class Game_2players():
 
 class MyGame:
     def __init__(self):
-        Players.find_and_load("./plugs")
         root = Tk()
         root.title('Checkers')
         the_game = Game_2players(root, "white", "black")
@@ -755,10 +832,25 @@ class MyGame:
         gc.collect()
         self.winner = the_game.winner
 
-for i in range(5):
-    with suppress(Exception):
-         new_game = MyGame()
-         print(new_game.winner)
+cands = Players.find_all("./plugs")
+
+for cand_a in cands:
+    for cand_b in cands:
+        if (cand_a == cand_b):
+            continue
+        succ = Players.load(cand_a, cand_b)
+        if (not succ):
+            continue
+        with suppress(Exception):
+             new_game = MyGame()
+             if (new_game.winner == Consts.DRAW):
+                 print_winner = Consts.DRAW
+             else:
+                 print_winner =  Players.base2 if (new_game.winner == "white") else Players.base1
+             file_object = open('sample.txt', 'a')
+             file_object.write(Players.base1 + "," + Players.base2 + "," + print_winner + '\n')
+             file_object.close()
+
 
 
 
