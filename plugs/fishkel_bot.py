@@ -1,6 +1,7 @@
 from demo import *
 import numpy as np
 import itertools
+from time import time
 
 def is_terminal(depth, board, length):
     if depth <= 0 or length == 0:
@@ -19,23 +20,31 @@ def can_eat(game_board, color, i, j):
     return len(eatings) != 0
 
 def make_move(board, move):
+    piece_eaten = None
     start = move[0][0]
     end = move[0][1]
     middle = ((start[0] + end[0])//2, (start[1] + end[1])//2)
     is_eat = move[1]
 
     if is_eat:
+        piece_eaten = board[middle[0]][middle[1]]
         board[middle[0]][middle[1]] = None
     
     board[end[0]][end[1]] = board[start[0]][start[1]]
     board[start[0]][start[1]] = None
+    return piece_eaten
 
-def reverse_move(board, move):
+def reverse_move(board, move, piece):
     start = move[0][0]
     end = move[0][1]
+    middle = ((start[0] + end[0])//2, (start[1] + end[1])//2)
     temp = board[start[0]][start[1]]
     board[start[0]][start[1]] = board[end[0]][end[1]]
     board[end[0]][end[1]] = temp
+    if move[1]:
+        board[middle[0]][middle[1]] = piece
+        
+
 def give_score(board, length, maximizingPlayer, weights_arr):
     if length == 0:
         if maximizingPlayer:
@@ -44,15 +53,13 @@ def give_score(board, length, maximizingPlayer, weights_arr):
     weights_arr = weights_arr
     white_pieces = []
     black_pieces = []
-    for i in range (len(board)):
-        for j in range(len(board)):
+    for i in range(8):
+        for j in range(8):
             if board[i][j]:
                 if board[i][j].color == "white":
                     white_pieces.append(board[i][j])
                 else:
                     black_pieces.append(board[i][j])
-            else:
-                continue
     score = 0.0
     white_queens = []
     black_queens = []
@@ -61,14 +68,14 @@ def give_score(board, length, maximizingPlayer, weights_arr):
     black_attacking = []
     black_defending = []
     for piece in white_pieces:
-        if piece.row > 4:
+        if piece.row < 4:
             white_attacking.append(piece)
         else:
             white_defending.append(piece)
         if piece.isQueen:
             white_queens.append(piece)
     for piece in black_pieces:
-        if piece.row > 4:
+        if piece.row >= 4:
             black_attacking.append(piece)
         else:
             black_defending.append(piece)
@@ -78,17 +85,14 @@ def give_score(board, length, maximizingPlayer, weights_arr):
     score += weights_arr[1] * len(white_defending)
     score += weights_arr[2] * len(white_attacking)
     
-    score -= weights_arr[0] * len(black_pieces)
+    score -= weights_arr[0] * len(black_queens)
     score -= weights_arr[1] * len(black_defending)
     score -= weights_arr[2] * len(black_attacking)
-    
-    score = score
-
 
     return score
 def minimax(board, depth, maximizingPlayer, hungry_piece, weights_arr):
-    same_turn = None
     best_move = None
+    
     color = "white"
     if maximizingPlayer is False:
         color = "black"
@@ -104,13 +108,13 @@ def minimax(board, depth, maximizingPlayer, hungry_piece, weights_arr):
     if maximizingPlayer:
         max_score = float('-inf')
         for move in possible_moves:
-            make_move(board, move)
+            piece = make_move(board, move)
             if move[1] == 0:
                 score = minimax(board, depth-1, maximizingPlayer, move[0][1], weights_arr)[0]
             else:
                 score = minimax(board, depth-1, not maximizingPlayer, None, weights_arr)[0]
             #if hungry_piece is none, then the last move was not an eating.
-            reverse_move(board, move)
+            reverse_move(board, move, piece)
             if score > max_score:
                 max_score = score
                 best_move = tuple(move[0][0]) + tuple(move[0][1])        
@@ -118,13 +122,13 @@ def minimax(board, depth, maximizingPlayer, hungry_piece, weights_arr):
     else:
         min_score = float('inf')
         for move in possible_moves:
-            make_move(board, move)
+            piece = make_move(board, move)
             if move[1] == 0:
                 score = minimax(board, depth-1, maximizingPlayer, move[0][1], weights_arr)[0]
             else:
                 score = minimax(board, depth-1, not maximizingPlayer, None, weights_arr)[0]
             #if hungry_piece is none, then the last move was not an eating.
-            reverse_move(board, move)
+            reverse_move(board, move, piece)
             if score < min_score:
                 min_score = score
                 best_move = tuple(move[0][0]) + tuple(move[0][1])
@@ -170,8 +174,13 @@ def all_options(game_board, color):
 def fishkel_bot(game_board, color, count, timeout, hungry_piece, weights_arr=[10,5,7]):
     print("fishkel gay: " + color)
     if color == "white":
-        return minimax(game_board, 6, True, hungry_piece,weights_arr)[1]
+        answer = minimax(game_board, 2, True, hungry_piece,weights_arr)
+        print(answer[0])
+        return answer[1]
     else:
-        return minimax(game_board, 6, False, hungry_piece,weights_arr)[1]
+        answer = minimax(game_board, 2, False, hungry_piece,weights_arr)
+        print(answer[0])
+        return answer[1]
+
 
 
