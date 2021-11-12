@@ -10,10 +10,10 @@ class Model:
             for j in range(0, 6, 2):
                 if i % 2 == 0:
                     self.board[i, j] = 1
-                    self.board[7 - i, j] = -1
+                    self.board[7 - i, j + 1] = -1
                 else:
                     self.board[i, j + 1] = 1
-                    self.board[7 - i, j + 1] = -1
+                    self.board[7 - i, j] = -1
         self.weights = weights
 
     # The last line of defence
@@ -73,7 +73,6 @@ class Model:
         for i in range(8):
             for j in range(8):
                 if self.board[i, j] == -1:
-                    print(self.board)
                     score -= self.weights[8 - i]
                 elif self.board[i, j] == 1:
                     score += self.weights[i + 1]

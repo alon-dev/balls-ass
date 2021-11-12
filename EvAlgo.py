@@ -20,8 +20,11 @@ def algo():
         while len(weigths) > 1:
             new_weights = []
             for i in range(len(weigths)):
-                winner = check_winner(weigths[2*i], weigths[2*i +1])
-                new_weights.append(winner)
+                try:
+                    winner = check_winner(weigths[2*i], weigths[2*i +1])
+                    new_weights.append(winner)
+                except:
+                    continue
             weigths = new_weights
         start_arr = weigths[0]
         print(start_arr)
@@ -43,7 +46,8 @@ def check_winner(weights1, weights2):
         else:
             model.weights = weights2
             move = model.minimax(3, False, None)[1]
-        model.make_move(move[0], move[1])
+        if move != None:
+            model.make_move(move[0], move[1])
         bot = not bot
         score1 = model.score(len(model.all_possible(not bot)), 0, not bot)
         moves += 1
@@ -59,7 +63,8 @@ def check_winner(weights1, weights2):
         else:
             model.weights = weights1
             move = model.minimax(3, False, None)[1]
-        model.make_move(move[0], move[1])
+        if move != None:
+            model.make_move(move[0], move[1])
         bot = not bot
         score2 = model.score(len(model.all_possible(not bot)), 0, not bot)
         moves += 1
