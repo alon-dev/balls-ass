@@ -10,7 +10,7 @@ def algo():
     start_arr = [20,1,3,5,7,9,11,13]
     learning_val = 5
     lerning_curve = 0.8
-    for _ in range(120):
+    while True:
         weigths = []
         for i in range(8):
             copy = start_arr.copy()
@@ -33,7 +33,7 @@ def algo():
         learning_val *= lerning_curve
     print("running time: " + str(time.perf_counter() - start))
     with open("result.txt",'w') as f:
-        f.write(str(start_arr))
+        f.writelines(str(start_arr))
         
 
 def check_winner(weights1, weights2):
