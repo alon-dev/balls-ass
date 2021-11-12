@@ -30,10 +30,10 @@ def algo():
             weigths = new_weights
         start_arr = weigths[0]
         print(start_arr)
+        with open("result.txt", 'w') as f:
+            f.writelines(str(start_arr))
         learning_val *= lerning_curve
-    print("running time: " + str(time.perf_counter() - start))
-    with open("result.txt",'w') as f:
-        f.writelines(str(start_arr))
+
         
 
 def check_winner(weights1, weights2):
